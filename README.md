@@ -1,3 +1,3 @@
 # SLR PHParser
 
-A very simple LR(1) parser generator written in PHP.
+A very simple LR(0) parser generator written in PHP.
