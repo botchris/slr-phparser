@@ -1,0 +1,27 @@
+{
+    "name": "christophercastro/slr-phparser",
+    "description": "A very simple LR(1) parser generator written in PHP.",
+    "keywords": [
+        "php",
+        "parser",
+        "slr",
+        "lr1"
+    ],
+    "homepage": "https://github.com/ChristopherCastro/slr-phparser",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Christopher Castro",
+            "email": "chris@quickapps.es",
+            "homepage": "http://www.quickappscms.org"
+        }
+    ],
+    "require": {
+        "php": ">=5.3"
+    },
+    "autoload": {
+        "psr-4": {
+            "Phparser\\": "src"
+        }
+    }
+}
