@@ -173,7 +173,7 @@ class Grammar
      * @param array $args Arguments for the rule's semantic routine.
      * @return void
      */
-    public function reduceBy($pNum, $args)
+    public function reduceBy($pNum, &$args)
     {
         $production = $this->_getProductionByNum($pNum);
         $routine = $this->_getRoutine($production);

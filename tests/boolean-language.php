@@ -66,8 +66,12 @@ $tokens = [
 $lexer = new Lexer($tokens);
 $grammar = new Grammar($productions);
 $parser = new Parser($lexer, $grammar);
+$exp = 'this and "this phrase" -negated created:"2013..2015"';
 
-$parser->run('this and "this phrase" -negated created:"2013..2015"');
+$parser->run($exp);
+
+echo "<code><p>String parsed: <b>{$exp}</b></p></code><hr/>";
+
 
 echo "<h2>Paser stack:</h2>";
 debug($parser->trace());

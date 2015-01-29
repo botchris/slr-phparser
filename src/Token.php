@@ -44,12 +44,16 @@ class Token
     }
 
     /**
-     * Gets token's value.
+     * Gets/sets token's value.
      *
+     * @param mixed $val The value to set
      * @return string
      */
-    public function value()
+    public function value($val = null)
     {
+        if ($val !== null) {
+            $this->_value = $val;
+        }
         return $this->_value;
     }
 

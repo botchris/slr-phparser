@@ -22,6 +22,13 @@ class Parser
     protected $_stokens = [];
 
     /**
+     * Syntax tree.
+     *
+     * @var array
+     */
+    protected $_tree = [];
+
+    /**
      * SLR parser stack
      *
      * @var array
@@ -111,7 +118,7 @@ class Parser
      */
     public function tree()
     {
-        return $this->_stokens;
+        return $this->_tree;
     }
 
     /**
@@ -157,7 +164,9 @@ class Parser
     {
         $to = intval(str_replace('s', '', $to));
         $this->_stack[] = $to;
-        $this->_stokens[] = array_shift($this->_sequence);
+        $node = array_shift($this->_sequence);
+        $this->_stokens[] = $node;
+        $this->_tree[] = $node;
         $this->_input = array_values($this->_sequence)[0];
     }
 
@@ -184,10 +193,12 @@ class Parser
         $productionTokens = [];
         for ($i = 0; $i < $rightCount; $i++) {
             $productionTokens[] = array_pop($this->_stokens);
+            $productionTokensForTree[] = array_pop($this->_tree);
         }
 
-        $args = ['rule' => $rule, 'tokens' => array_reverse($productionTokens)];
-        $this->_stokens[] = $args;
+        $args = array_reverse($productionTokens);
+        $this->_tree[] = ['rule' => $rule, 'tokens' => array_reverse($productionTokensForTree)];
+        $this->_stokens[] = &$args;
         $this->_grammar->reduceBy($by, $args);
     }
 
