@@ -1,5 +1,5 @@
 {
-    "name": "christophercastro/lr1-phparser",
+    "name": "christophercastro/slr-phparser",
     "description": "A very simple LR(1) parser generator written in PHP.",
     "keywords": [
         "php",
