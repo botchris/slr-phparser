@@ -1,5 +1,7 @@
 <?php
-namespace Phparser;
+namespace Phparser\Lexer;
+
+use Phparser\Lexer\Token;
 
 /**
  * Lexer class for extracting tokens from a given input.

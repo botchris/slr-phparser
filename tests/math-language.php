@@ -2,36 +2,36 @@
 
 require __DIR__ . '/config/bootstrap.php';
 
-use Phparser\Grammar;
-use Phparser\Lexer;
-use Phparser\Parser;
+use Phparser\Grammar\Grammar;
+use Phparser\Lexer\Lexer;
+use Phparser\Parser\Parser;
 
 $RESULT = 0;
 $productions = [
-    ['S' => 'exp_a', function ($info) {
+    ['S -> exp_a', function ($info) {
         global $RESULT;
         $info = $info[0];
         $RESULT = $info;
     }],
-    ['exp_a' => 'exp_a T_PLS exp_a', function (&$info) {
+    ['exp_a -> exp_a T_PLS exp_a', function (&$info) {
        $info = $info[0] + $info[2];
     }],   
-    ['exp_a' => 'exp_a T_SUB exp_a', function (&$info) {
+    ['exp_a -> exp_a T_SUB exp_a', function (&$info) {
        $info = $info[0] - $info[2];
     }],   
-    ['exp_a' => 'exp_a T_MUL exp_a', function (&$info) {
+    ['exp_a -> exp_a T_MUL exp_a', function (&$info) {
         $info = $info[0] * $info[2];
     }],   
-    ['exp_a' => 'exp_a T_DIV exp_a', function (&$info) {
+    ['exp_a -> exp_a T_DIV exp_a', function (&$info) {
         $info = $info[0] / $info[2];
     }],   
-    ['exp_a' => 'T_LP exp_a T_RP', function (&$info) {
+    ['exp_a -> T_LP exp_a T_RP', function (&$info) {
         $info = $info[1];
     }],
-    ['exp_a' => 'T_SQRT T_LP exp_a T_RP', function (&$info) {
+    ['exp_a -> T_SQRT T_LP exp_a T_RP', function (&$info) {
         $info = sqrt($info[2]);
     }],   
-    ['exp_a' => 'T_NUM', function (&$info) {
+    ['exp_a -> T_NUM', function (&$info) {
         $info = intval($info[0]->value());
     }],
 ];
@@ -61,13 +61,13 @@ echo "<h2>Paser stack:</h2>";
 debug($parser->trace());
 
 echo "<h2>First set:</h2>";
-debug($grammar->first());
+debug($grammar->rules()->first());
 
 echo "<h2>Follow set:</h2>";
-debug($grammar->follow());
+debug($grammar->rules()->follow());
 
 echo "<h2>Parsing table:</h2>";
-debug($grammar->parseTable());
+debug($grammar->transitionTable());
 
 echo "<h2>Syntax Tree:</h2>";
-debug($parser->tree());
+debug($parser->treeAsString());

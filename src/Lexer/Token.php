@@ -1,5 +1,5 @@
 <?php
-namespace Phparser;
+namespace Phparser\Lexer;
 
 /**
  * Represents a single token for the grammar.

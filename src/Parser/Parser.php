@@ -1,5 +1,9 @@
 <?php
-namespace Phparser;
+namespace Phparser\Parser;
+
+use Phparser\Grammar\Grammar;
+use Phparser\Lexer\Lexer;
+use Phparser\Lexer\Token;
 
 /**
  * Grammar parser class.
@@ -63,7 +67,7 @@ class Parser
      * @param \Phparser\Lexer $lexer Lexer instance.
      * @param \Phparser\Grammar $grammar Grammar instance.
      */
-    public function __construct($lexer, $grammar)
+    public function __construct(Lexer $lexer, Grammar $grammar)
     {
         $this->_grammar = $grammar;
         $this->_lexer = $lexer;
@@ -122,6 +126,37 @@ class Parser
     }
 
     /**
+     * Gets the syntax tree as string.
+     *
+     * @return array
+     */
+    public function treeAsString()
+    {
+        if (!empty($this->_tree[0])) {
+            return $this->_printNode($this->_tree[0]);
+        }
+
+        return '';
+    }
+
+    protected function _printNode($node, $depth = 0)
+    {
+        $prefix = str_repeat('-', $depth);
+        $out = '';
+        if ($node instanceof Token) {
+            $out .= $prefix . $node->id() . "\n";
+        } elseif (!empty($node['rule'])) {
+            $out .= $prefix . $node['rule'] . "\n";
+            if (!empty($node['tokens'])) {
+                foreach ($node['tokens'] as $token) {
+                    $out .= $this->_printNode($token, $depth + 1);
+                }
+            }
+        }
+        return $out;
+    }
+
+    /**
      * Initializes some internal required for the parsing process, stack, grammar,
      * etc.
      *
@@ -135,7 +170,7 @@ class Parser
         $this->_input = $this->_sequence[0];
 
         $validTokens = array_filter($this->_lexer->tokens());
-        $grammarTerminals = $this->_grammar->terminals();
+        $grammarTerminals = $this->_grammar->rules()->terminals();
         $diff = array_diff($grammarTerminals, $validTokens); // check unused tokens?
     }
 
@@ -148,8 +183,7 @@ class Parser
     {
         $top = end($this->_stack);
         $token = $this->_input;
-        $info = $this->_grammar->parseTable()[$top];
-        $action = $info[$token->id()];
+        $action = $this->_grammar->transitionTable()->get($top, $token->id());
         $action = !empty($action) ? $action : 'err';
         return $action;
     }
@@ -179,16 +213,16 @@ class Parser
     protected function _reduce($by)
     {
         $by = intval(str_replace('r', '', $by));
-        $rule = $this->_grammar->productions()[$by];
-        $ruleRight = array_values($rule)[0];
-        $ruleLeft = array_keys($rule)[0];
-        $rightCount = count(explode(' ', $ruleRight));
+        $rule = $this->_grammar->rules()->getRuleByIndex($by);
+        $rhs = $rule->rhs();
+        $lhs = $rule->lhs();
+        $rightCount = count(explode(' ', $rhs));
 
         for ($i = 0; $i < $rightCount; $i++) {
             array_pop($this->_stack);
         }
 
-        $this->_stack[] = $this->_goto($ruleLeft);
+        $this->_stack[] = $this->_goto($lhs);
 
         $productionTokens = [];
         for ($i = 0; $i < $rightCount; $i++) {
@@ -211,7 +245,7 @@ class Parser
     protected function _goto($variable)
     {
         $top = end($this->_stack);
-        return $this->_grammar->parseTable()[$top][$variable];
+        return $this->_grammar->transitionTable()->get($top, $variable);
     }
 
     /**

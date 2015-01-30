@@ -2,53 +2,25 @@
 
 require __DIR__ . '/config/bootstrap.php';
 
-use Phparser\Grammar;
-use Phparser\Lexer;
-use Phparser\Parser;
+use Phparser\Grammar\Grammar;
+use Phparser\Lexer\Lexer;
+use Phparser\Parser\Parser;
 
 $productions = [
-    ['S' => 'exp_b', function ($info) {
-
-    }],
-    ['exp_b' => 'exp_b exp_b', function ($info) {
-
-    }],
-    ['exp_b' => 'exp_b T_OR exp_b', function ($info) {
-
-    }],
-    ['exp_b' => 'exp_b T_AND exp_b', function ($info) {
-
-    }],
-    ['exp_b' => 'T_NOT exp_b', function ($info) {
-
-    }],
-    ['exp_b' => 'T_LP exp_b T_RP', function ($info) {
-
-    }],
-    ['exp_b' => 'expression', function ($info) {
-
-    }],
-    ['expression' => 'statement', function ($info) {
-
-    }],
-    ['expression' => 'command', function ($info) {
-
-    }],
-    ['statement' => 'T_LITERAL', function ($info) {
-
-    }],
-    ['statement' => 'T_WORD', function ($info) {
-
-    }],
-    ['command' => 'T_WORD T_CMD command_arg', function ($info) {
-
-    }],
-    ['command_arg' => 'T_LITERAL', function ($info) {
-
-    }],
-    ['command_arg' => 'T_WORD', function ($info) {
-
-    }],
+    'S -> exp_b',
+    'exp_b -> exp_b exp_b',
+    'exp_b -> exp_b T_OR exp_b',
+    'exp_b -> exp_b T_AND exp_b',
+    'exp_b -> T_NOT exp_b',
+    'exp_b -> T_LP exp_b T_RP',
+    'exp_b -> expression',
+    'expression -> statement',
+    'expression -> command',
+    'statement -> T_LITERAL',
+    'statement -> T_WORD',
+    'command -> T_WORD T_CMD command_arg',
+    'command_arg -> T_LITERAL',
+    'command_arg -> T_WORD',
 ];
 
 $tokens = [
@@ -77,13 +49,13 @@ echo "<h2>Paser stack:</h2>";
 debug($parser->trace());
 
 echo "<h2>First set:</h2>";
-debug($grammar->first());
+debug($grammar->rules()->first());
 
 echo "<h2>Follow set:</h2>";
-debug($grammar->follow());
+debug($grammar->rules()->follow());
 
 echo "<h2>Parsing table:</h2>";
-debug($grammar->parseTable());
+debug($grammar->transitionTable());
 
 echo "<h2>Syntax Tree:</h2>";
-debug($parser->tree());
+debug($parser->treeAsString());
