@@ -67,7 +67,7 @@ echo "<h2>Follow set:</h2>";
 debug($grammar->rules()->follow());
 
 echo "<h2>Parsing table:</h2>";
-debug($grammar->transitionTable());
+debug(draw_table($grammar->transitionTable()->toArray()));
 
 echo "<h2>Syntax Tree:</h2>";
 debug($parser->treeAsString());

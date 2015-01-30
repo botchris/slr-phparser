@@ -64,6 +64,20 @@ class TransitionTable implements Iterator
         return null;
     }
 
+    public function toArray()
+    {
+        $table = $this->_table;
+        $i = 0;
+        foreach ($table as &$row) {
+            foreach ($row as $column => $value) {
+                $row[$column] = empty($row[$column]) ? '-' : $row[$column];
+            }
+            $row = ['#State' => $i] + $row;
+            $i++;
+        }
+        return $table;
+    }
+
     /**
      * Generates an empty row for the parser table.
      *
@@ -77,24 +91,6 @@ class TransitionTable implements Iterator
         }
 
         return $row;
-    }
-
-    public function __toString()
-    {
-        $rows = [''];
-        foreach (array_merge([' / '], $this->_columns) as $columnName) {
-            $rows[0] .= sprintf('%2s', $columnName);
-        }
-
-        foreach ($this->_table as $stateNum => $columns) {
-            $row = sprintf('%2s', $stateNum);
-            foreach ($columns as $columnName => $columnValue){
-                $row .= sprintf('%2s', $columnValue);
-            }
-            $rows[] = $row;
-        }
-
-        return implode("\n", $rows);
     }
 
     public function rewind()
