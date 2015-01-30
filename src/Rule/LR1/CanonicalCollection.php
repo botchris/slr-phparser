@@ -1,8 +1,8 @@
 <?php
-namespace Phparser\Rule;
+namespace Phparser\Rule\LR1;
 
-use Phparser\Rule\CollectionInterface;
 use Phparser\Rule\Rule;
+use Phparser\Rule\LR1\RulesCollection;
 use \Iterator;
 
 /**
@@ -39,7 +39,7 @@ class CanonicalCollection implements Iterator
         }
     }
 
-    public function push(CollectionInterface $set)
+    public function push(RulesCollection $set)
     {
         if ($set->count() > 0 && !$this->exists($set)) {
             $this->_items[] = $set;
@@ -54,7 +54,7 @@ class CanonicalCollection implements Iterator
         return array_pop($this->_items);
     } 
 
-    public function exists(CollectionInterface $set)
+    public function exists(RulesCollection $set)
     {
         foreach ($this->_items as $s) {
             if ("{$s}" == "{$set}") {

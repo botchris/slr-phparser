@@ -24,6 +24,7 @@ namespace Phparser\Rule;
  */
 class Rule
 {
+
     /**
      * String representation.
      *
@@ -58,6 +59,13 @@ class Rule
      * @var callable
      */
     protected $_routine = null;
+
+    /**
+     * Lookahead terminal, used by LR(1) parsers.
+     *
+     * @var string
+     */
+    protected $_lookahead = '';
 
     /**
      * Creates a new token.
@@ -100,6 +108,21 @@ class Rule
     }
 
     /**
+     * Gets/sets lookahead symbol.
+     *
+     * @param string $la A valid terminal symbol
+     * @return string
+     */
+    public function lookahead($la = null)
+    {
+        if ($la !== null) {
+            $this->_lookahead = $la;
+        }
+
+        return $this->_lookahead;
+    }
+
+    /**
      * Gets left hand side.
      * 
      * @return string
@@ -126,6 +149,7 @@ class Rule
      */
     public function __toString()
     {
-        return $this->_asString;
+        $suffix = $this->_lookahead ? ", {$this->_lookahead}" : '';
+        return $this->_asString . $suffix;
     }
 }

@@ -5,7 +5,7 @@ require __DIR__ . '/config/bootstrap.php';
 use Phparser\Grammar\Grammar;
 use Phparser\Lexer\Lexer;
 use Phparser\Parser\Parser;
-use Phparser\Rule\LR0\RulesCollection;
+use Phparser\Rule\LR1\RulesCollection;
 
 $RESULT = 0;
 $productions = new RulesCollection([
@@ -39,9 +39,9 @@ $productions = new RulesCollection([
 
 $tokens = [
     '\*' => 'T_MUL',
+    '\/' => 'T_DIV',
     '\+' => 'T_PLS',
     '\-' => 'T_SUB',
-    '\/' => 'T_DIV',
     'sqrt' => 'T_SQRT',
     '[0-9]+' => 'T_NUM',
     '\(' => 'T_LP',
@@ -52,11 +52,15 @@ $tokens = [
 $lexer = new Lexer($tokens);
 $grammar = new Grammar($productions);
 $parser = new Parser($lexer, $grammar);
-$exp = '50 + (20 * 2) + 1 - (1 / 2) + sqrt(90)';
+$exp = '50 + 20 * 3 / 2 - 1';
 
+$grammar->prec('T_MUL', 4);
+$grammar->prec('T_DIV', 3);
+$grammar->prec('T_PLS', 2);
+$grammar->prec('T_SUB', 1);
 $parser->run($exp);
 
-echo "<code><p><b>{$exp}</b> = {$RESULT}</p></code><hr/>";
+echo "<code><p><b>{$exp}</b> = {$RESULT}</p></code>Precedence: '*' > '/' > '+' > '-'<hr/>";
 
 echo "<h2>Paser trace:</h2>";
 debug($parser->trace());

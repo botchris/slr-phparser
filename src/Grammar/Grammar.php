@@ -2,8 +2,7 @@
 namespace Phparser\Grammar;
 
 use Phparser\Rule\Rule;
-use Phparser\Rule\RulesCollection;
-use Phparser\Rule\CanonicalCollection;
+use Phparser\Rule\CollectionInterface;
 
 /**
  * Grammar which describes a language.
@@ -26,6 +25,8 @@ class Grammar
      */
     protected $_table = null;
 
+    protected $_prec = [];
+
     /**
      * Acceptance production, used internally.
      *
@@ -47,7 +48,7 @@ class Grammar
      *
      * @param array $rules List of productions
      */
-    public function __construct($rules)
+    public function __construct(CollectionInterface $rules)
     {
         $this->rules($rules);
     }
@@ -72,16 +73,52 @@ class Grammar
      *  productions given as array or collection
      * @return array
      */
-    public function rules($rules = null)
+    public function rules(CollectionInterface $rules = null)
     {
         if ($rules !== null) {
-            if (is_array($rules)) {
-                $this->_rules = new RulesCollection($rules);
-            } elseif (is_object($rules)) {
-                $this->_rules = $rules;
-            }
+            $this->_rules = $rules;
         }
         return $this->_rules;
+    }
+
+    /**
+     * Sets operator precedence.
+     * 
+     * @param string $token The operator
+     * @param int $priority It's priority. Higher the number, higher its priority.
+     * @return int Priority for the given operator
+     */
+    public function prec($token, $priority = null)
+    {
+        if (is_integer($priority)) {
+            $this->_prec[$token] = $priority;
+        }
+
+        if (isset($this->_prec[$token])) {
+            return $this->_prec[$token];
+        }
+
+        return 0;
+    }
+
+    /**
+     * Sets associativity to use to solve priority conflicts.
+     * 
+     * @param int $precLvl Precedence level
+     * @param string $leftOrRight Associativity symbol (>, <, <=, >=) 
+     * @return string The associativity symbol for the given precedence level
+     */
+    public function assoc($precLvl, $assoc = null)
+    {
+        if (in_array($assoc, ['<', '>', '<=', '>='])) {
+            $this->_assoc[$precLvl] = $assoc;
+        }
+
+        if (isset($this->_assoc[$precLvl])) {
+            return $this->_assoc[$precLvl];
+        }
+
+        return '<';
     }
 
     /**
@@ -107,6 +144,7 @@ class Grammar
         foreach ($collection as $i => $set) {
             // for A -> alpha . beta
             foreach ($set as $rule) {
+                $lookahead = $rule->lookahead();
                 $lhs = $rule->lhs();
                 $rhs = $rule->rhs();
 
@@ -118,18 +156,62 @@ class Grammar
                     if (in_array($a, $this->_rules->variables())) {
                         $this->_table->set($i, $matches[1], $this->_rules->gotoIndex($set, $matches[1]));
                     } elseif (in_array($a, $this->_rules->terminals())) {
-                        $this->_table->set($i, $matches[1], 's' . $this->_rules->gotoIndex($set, $matches[1]));
+                        $actual = $this->_table->get($i, $matches[1]);
+                        $new = 's' . $this->_rules->gotoIndex($set, $matches[1]);
+                        $final = $actual ? "{$new}/{$actual}" : $new;
+
+                        // conflict resolution
+                        if (preg_match('/^s\d\/r(\d)$/', $final, $m)) {
+                            $cRule = $this->_rules->getRuleByIndex(intval($m[1]));
+                            $invert = false;
+                            $rt = end(array_intersect(
+                                explode(' ', $cRule->rhs()),
+                                $this->_rules->terminals()
+                            ));
+
+                            if ($this->prec($matches[1]) < $this->prec($rt)) {
+                                $invert = true;
+                            } elseif ($this->prec($matches[1]) == $this->prec($rt)) {
+                                switch ($this->assoc($this->prec($matches[1]))) {
+                                    case '<':
+                                        $invert = $this->prec($matches[1]) < $this->prec($rt);
+                                        break;
+                                    case '>':
+                                        $invert = $this->prec($matches[1]) > $this->prec($rt);
+                                        break;
+                                    case '<=':
+                                        $invert = $this->prec($matches[1]) <= $this->prec($rt);
+                                        break;
+                                    case '>=':
+                                        $invert = $this->prec($matches[1]) >= $this->prec($rt);
+                                        break;
+                                }
+                            }
+
+                            if ($invert) {
+                                list($p1, $p2) = explode('/', $final);
+                                $final = "{$p2}/{$p1}";
+                            }
+                        }
+
+                        $final = implode('/', array_unique(explode('/', $final)));
+                        $this->_table->set($i, $matches[1], $final);
+
                     }
                 } else {
                     if (!empty($follow[$lhs])) {
                         foreach ($follow[$lhs] as $terminal) {
-                            $this->_table->set($i, $terminal, 'r' . $this->_rules->getRuleIndex($rule));
+                            $actual = $this->_table->get($i, $terminal);
+                            $new = 'r' . $this->_rules->getRuleIndex($rule);
+                            $this->_table->set($i, $terminal, $new);
                         }
                     }
                 }
             }
 
-            if ($set->exists($this->_acceptanceRule())) {
+            $extendedAcceptance = clone $this->_acceptanceRule();
+            $extendedAcceptance->lookahead('$');
+            if ($set->exists($this->_acceptanceRule()) || $set->exists($extendedAcceptance)) {
                 $this->_table->set($i, '$', 'acc');
             }
         }

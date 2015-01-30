@@ -1,7 +1,7 @@
 <?php
 namespace Phparser\Grammar;
 
-use Phparser\Rule\RulesCollection;
+use Phparser\Rule\CollectionInterface;
 use \Iterator;
 
 /**
@@ -35,11 +35,11 @@ class TransitionTable implements Iterator
     /**
      * Constructor.
      * 
-     * @param \Phparser\Rule\RulesCollection $rules Rules of the grammar, used to
+     * @param \Phparser\Rule\CollectionInterface $rules Rules of the grammar, used to
      *  extract all valid symbols (variables and terminals) which are the columns
      *  of this table.
      */
-    public function __construct(RulesCollection $rules)
+    public function __construct(CollectionInterface $rules)
     {
         $this->_columns = array_merge(
             $rules->terminals(),

@@ -174,7 +174,7 @@ class Parser
         $invalidTokens = array_diff($grammarTokens, $lexerTokens);
         $unusedTokens = array_diff($lexerTokens, $grammarTokens);
 
-        if (!empty($invalidTokens)) {
+        if (!in_array('$', $invalidTokens) && !empty($invalidTokens)) {
             throw new \Exception(sprintf('Invalid tokens were found in the provided grammar: %s', implode(', ', $invalidTokens)));
         }
 
@@ -193,6 +193,7 @@ class Parser
         $top = end($this->_stack);
         $token = $this->_input;
         $action = $this->_grammar->transitionTable()->get($top, $token->id());
+        $action = explode('/', $action)[0];
         $action = !empty($action) ? $action : 'err';
         return $action;
     }

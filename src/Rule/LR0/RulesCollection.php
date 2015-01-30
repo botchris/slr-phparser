@@ -1,6 +1,9 @@
 <?php
-namespace Phparser\Rule;
+namespace Phparser\Rule\LR0;
 
+use Phparser\Rule\CanonicalCollection;
+use Phparser\Rule\CollectionInterface;
+use Phparser\Rule\FirstFollowTrait;
 use Phparser\Rule\Rule;
 use \Iterator;
 
@@ -8,8 +11,9 @@ use \Iterator;
  * A collection of rules.
  *
  */
-class RulesCollection implements Iterator
+class RulesCollection implements Iterator, CollectionInterface
 {
+    use FirstFollowTrait;
 
     /**
      * Used for iterator interface.
@@ -46,41 +50,12 @@ class RulesCollection implements Iterator
      */
     protected $_terminals = [];
 
-    /**
-     * First set for each variable.
-     *
-     * @var array
-     */
-    protected $_first = [];
-
-    /**
-     * Used to speed up some methods.
-     *
-     * @var array
-     */
-    protected $_cachedFirst = null;
-
-    /**
-     * Follow set for each variable.
-     *
-     * @var array
-     */
-    protected $_follow = [];
-
-
-    /**
-     * Used to speed up some methods.
-     *
-     * @var array
-     */
-    protected $_cachedFollow = null;
-
      /**
      * Canonical collection of items.
      *
-     * @var array
+     * @var \Phparser\Rule\CanonicalCollection
      */
-    protected $_canonicalCollection = [];
+    protected $_canonicalCollection = null;
 
     /**
      * Creates a new collection of rules.
@@ -222,8 +197,10 @@ class RulesCollection implements Iterator
      */
     public function getRuleIndex(Rule $rule)
     {
+        $rule = preg_replace('/, (.+)$/', '', (string)$rule);
+        $rule = str_replace('.', '', $rule);
         foreach ($this->_rules as $index => $r) {
-            if (str_replace('.', '', "{$rule}") == str_replace('.', '', "{$r}")) {
+            if ($rule == str_replace('.', '', "{$r}")) {
                 return $index;
             }
         }
@@ -268,7 +245,6 @@ class RulesCollection implements Iterator
 
         $hasChanged = true;
         while ($hasChanged) {
-            $before = "{$collection}";
             $hasChanged = false;
             foreach ($collection as $set) {
                 $symbols = array_merge($this->variables(), $this->terminals());
@@ -276,13 +252,11 @@ class RulesCollection implements Iterator
                     $goto = $this->gotoSet($set, $symbol);
                     if ($goto) {
                         $closure = $this->_closure($goto);
-                        $collection->push($closure);
+                        if ($collection->push($closure)) {
+                            $hasChanged = true;
+                        }
                     }
                 }
-            }
-
-            if ($before != "{$collection}") {
-                $hasChanged = true;
             }
         }
 
@@ -336,14 +310,14 @@ class RulesCollection implements Iterator
      * @param \Phparser\Rule\RulesCollection $set Set of rules
      * @return array
      */
-    protected function _closure(RulesCollection $set)
+    protected function _closure(CollectionInterface $set)
     {
+        $regex = implode('|', $this->variables());
         $hasChanged = true;
         while ($hasChanged) {
             $hasChanged = false;
 
             foreach ($set as $rule) {
-                $regex = implode('|', $this->variables());
                 $result = preg_match('/\.\b(' . $regex . ')\b/', $rule->rhs(), $matches);
 
                 if ($result) {
@@ -363,174 +337,6 @@ class RulesCollection implements Iterator
         }
 
         return $set;
-    }
-
-    /**
-     * Calculates the First set.
-     *
-     * @return array
-     */
-    public function first()
-    {
-        if ($this->_cachedFirst !== null) {
-            return (array)$this->_cachedFirst;
-        }
-
-        $first = [];
-
-        // Put the terminals in the array
-        foreach ($this->terminals() as $t) {
-            $first[$t] = [$t];
-        }
-
-        // Put the variables in the array as empty sets.
-        foreach ($this->variables() as $v) {
-            $first[$v] = [];
-        }
-
-        $hasChanged = true;
-
-        while ($hasChanged) {
-            $hasChanged = false;
-            foreach ($this->_rules as $rule) {
-                $variable = $rule->lhs();
-                $rhs = $rule->rhs();
-                $firstRhs = $this->_first($first, $rhs);
-
-                $before = $first;
-                $first[$variable] = array_merge($first[$variable], $firstRhs);
-                $first[$variable] = array_unique($first[$variable]);
-                if ($before != $first) {
-                    $hasChanged = true;
-                }
-            }
-        };
-
-        $this->_cachedFirst = $first;
-        return $this->first();
-    }
-
-    /**
-     * Calculates the Follow set.
-     *
-     * @return array
-     */
-    public function follow()
-    {
-        if ($this->_cachedFollow !== null) {
-            return (array)$this->_cachedFollow;
-        }
-        $follow = [];
-        $follow[$this->_startVariable] = ['$'];
-
-        // Make every follow mapping empty for now.
-        foreach ($this->variables() as $variable) {
-            if ($variable != $this->_startVariable) {
-                $follow[$variable] = [];
-            }
-        }
-
-        $firstSets = $this->first();
-        $hasChanged = true;
-        while ($hasChanged) {
-            $hasChanged = false;
-            $before = $follow;
-
-            foreach ($this->_rules as $rule) {
-                $variable = $rule->lhs();
-                $rhs = $rule->rhs();
-
-                $parts = explode(' ', trim($rhs));
-                foreach ($parts as $k => $rhsVariable) {
-                    if (!in_array($rhsVariable, $this->variables())) {
-                        continue;
-                    }
-
-                    if (isset($parts[$k + 1])) {
-                        $firstFollowing = $this->_first($firstSets, $parts[$k + 1]);
-                    } else {
-                        $firstFollowing = [];
-                        $firstFollowing[] = '';
-                    }
-
-                    // Is lambda in that following the variable? For
-                    // A->aBb where lambda is in FIRST(b), everything
-                    // in FOLLOW(A) is in FOLLOW(B).
-                    if (in_array('', $firstFollowing)) {
-                        foreach ($firstFollowing as $key => $val) {
-                            if ($val === '') {
-                                unset($firstFollowing[$key]);
-                            }
-                        }
-                        $follow[$rhsVariable] = array_merge(
-                            $follow[$rhsVariable],
-                            $follow[$variable]
-                        );
-                        $follow[$rhsVariable] = array_unique($follow[$rhsVariable]);
-                    }
-
-                    // For A->aBb, everything in FIRST(b) except
-                    // lambda is put in FOLLOW(B).
-                    $follow[$rhsVariable] = array_merge(
-                        $follow[$rhsVariable],
-                        $firstFollowing
-                    );
-                    $follow[$rhsVariable] = array_unique($follow[$rhsVariable]);
-                }
-            }
-
-            if ($before != $follow) {
-                $hasChanged = true;
-            }
-        }
-
-        $this->_cachedFollow = $follow;
-        return $this->follow();
-    }    
-
-    /**
-     * Given a first map as returned by first() and a sequence of symbols,
-     * return the first for that sequence.
-     *
-     * @param array $firstSets The map of single symbols to a map
-     * @param array $sequence A string of symbols
-     * @return array The first set for that sequence of symbols
-     */
-    protected function _first(&$firstSet, $sequence)
-    {
-        $first = [];
-        $sequence = trim($sequence);
-
-        if (empty($sequence)) {
-            $first[] = '';
-        }
-
-        $parts = explode(' ', $sequence);
-        $limit = count($parts);
-
-        for ($j = 0; $j < $limit; $j++) {
-            $s = $firstSet[$parts[$j]];
-            if (!in_array('', $s)) {
-                // Doesn't contain lambda. Add it and get the hell out of dodge.
-                $first = array_merge($first, $s);
-                break;
-            }
-
-            // Does contain lambda. Damn it.
-            if ($j != (count($parts) - 1)) {
-                foreach ($s as $key => $val) {
-                    if ($val == '') {
-                        unset($s[$key]);
-                    }
-                }
-            }
-            $first = array_merge($first, $s);
-            if ($j != (count($parts) - 1)) {
-                $s[] = '';
-            }
-        }
-
-        return array_unique($first);
     }
 
     public function count()
@@ -556,7 +362,7 @@ class RulesCollection implements Iterator
             $out[] = "{$rule}";
         }
 
-        return '{' . implode(', ', $out) . '}';
+        return '{' . implode('; ', $out) . '}';
     }
 
     public function rewind()
