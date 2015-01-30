@@ -57,7 +57,7 @@ $parser->run($exp);
 
 echo "<code><p><b>{$exp}</b> = {$RESULT}</p></code><hr/>";
 
-echo "<h2>Paser stack:</h2>";
+echo "<h2>Paser trace:</h2>";
 debug($parser->trace());
 
 echo "<h2>First set:</h2>";

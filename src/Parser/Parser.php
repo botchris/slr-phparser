@@ -169,9 +169,18 @@ class Parser
         $this->_stack[] = 0;
         $this->_input = $this->_sequence[0];
 
-        $validTokens = array_filter($this->_lexer->tokens());
-        $grammarTerminals = $this->_grammar->rules()->terminals();
-        $diff = array_diff($grammarTerminals, $validTokens); // check unused tokens?
+        $grammarTokens = $this->_grammar->rules()->terminals();
+        $lexerTokens = array_filter($this->_lexer->tokens());
+        $invalidTokens = array_diff($grammarTokens, $lexerTokens);
+        $unusedTokens = array_diff($lexerTokens, $grammarTokens);
+
+        if (!empty($invalidTokens)) {
+            throw new \Exception(sprintf('Invalid tokens were found in the provided grammar: %s', implode(', ', $invalidTokens)));
+        }
+
+        if (!empty($unusedTokens)) {
+            $this->_log(sprintf('Unused tokens were found: %s', implode(', ', $unusedTokens)));
+        }
     }
 
     /**
