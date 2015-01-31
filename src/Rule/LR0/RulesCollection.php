@@ -149,21 +149,41 @@ class RulesCollection implements Iterator, CollectionInterface
         }
     }
 
+    /**
+     * Gets a starting variable (grammar's axiom).
+     *
+     * @return string
+     */
     public function startVariable()
     {
         return $this->_startVariable;
     }
 
+    /**
+     * Gets a list of all valid variables in this collection.
+     *
+     * @return array
+     */
     public function variables()
     {
         return $this->_variables;
     }
 
+    /**
+     * Gets a list of all valid terminals in this collection.
+     *
+     * @return array
+     */
     public function terminals()
     {
         return $this->_terminals;
     }
 
+    /**
+     * Pushes a new element to this collection.
+     *
+     * @return bool True if new element was inserted, false otherwise.
+     */
     public function push(Rule $rule)
     {
         if (!$this->exists($rule)) {
@@ -172,6 +192,16 @@ class RulesCollection implements Iterator, CollectionInterface
         }
 
         return false;
+    }
+
+    /**
+     * Pops out the last element from the rules stack.
+     * 
+     * @return \Phparser\Rule\Rule
+     */
+    public function pop()
+    {
+        return array_pop($this->_rules);
     }
 
     /**
@@ -184,9 +214,40 @@ class RulesCollection implements Iterator, CollectionInterface
         return array_unshift($this->_rules, $rule);
     }
 
-    public function pop()
+    /**
+     * Calculates this collection's core.
+     * 
+     * @param bool $hash If true it'll returns a hash value representing its core,
+     *  if false it'll returns an array of rules representing its core.
+     * @return string|array
+     */
+    public function core($hash = false)
     {
-        return array_pop($this->_rules);
+        $coreHash = '';
+        $coreArray = [];
+        foreach ($this->_rules as $rule) {
+            $copy = clone $rule;
+            $copy->lookahead('');
+            $coreHash .= (string)$copy;
+            $coreArray[] = $copy;
+        }
+
+        $result = $hash ? md5($coreHash) : $coreArray;
+        return $result;
+    }
+
+    /**
+     * Merge two collection of rules.
+     * 
+     * @param \Phparser\Rule\CollectionInterface $collection Collection to merge with
+     * @return void
+     */
+    public function merge(CollectionInterface $collection)
+    {
+        foreach ($collection as $rule) {
+            $this->push($rule);
+        }
+        debug($this->_rules);
     }
 
     /**
@@ -339,11 +400,22 @@ class RulesCollection implements Iterator, CollectionInterface
         return $set;
     }
 
+    /**
+     * Returns the number of elements on this collection.
+     * 
+     * @return int
+     */
     public function count()
     {
         return count($this->_rules);
     }
 
+    /**
+     * Checks whether a rule exists in this collection or not.
+     * 
+     * @param \Phparser\Rulre\Rule $rule
+     * @return bool
+     */
     public function exists(Rule $rule)
     {
         foreach ($this->_rules as $r) {
@@ -355,6 +427,11 @@ class RulesCollection implements Iterator, CollectionInterface
         return false;
     }
 
+    /**
+     * Strings representation of this collection.
+     * 
+     * @return string
+     */
     public function __toString()
     {
         $out = [];
@@ -365,26 +442,51 @@ class RulesCollection implements Iterator, CollectionInterface
         return '{' . implode('; ', $out) . '}';
     }
 
+    /**
+     * Part of Iterator interface.
+     *
+     * @return int
+     */
     public function rewind()
     {
         $this->_position = 0;
     }
 
+    /**
+     * Part of Iterator interface.
+     *
+     * @return \Phparser\Rule\Rule
+     */
     public function current()
     {
         return $this->_rules[$this->_position];
     }
 
+    /**
+     * Part of Iterator interface.
+     *
+     * @return int
+     */
     public function key()
     {
         return $this->_position;
     }
 
+    /**
+     * Part of Iterator interface.
+     *
+     * @return int
+     */
     public function next()
     {
         ++$this->_position;
     }
 
+    /**
+     * Part of Iterator interface.
+     *
+     * @return bool
+     */
     public function valid() {
         return isset($this->_rules[$this->_position]);
     }
