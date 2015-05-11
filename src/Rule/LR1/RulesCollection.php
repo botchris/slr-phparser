@@ -61,7 +61,7 @@ class RulesCollection extends LR0 implements Iterator, CollectionInterface
 
         $this->_canonicalCollection = $collection;
         return $collection;
-    }    
+    }
 
     /**
      * Calculates the "goto" set for a given $item and $symbol.

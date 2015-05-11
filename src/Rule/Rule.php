@@ -76,6 +76,9 @@ class Rule
     public function __construct($string, $routine = null)
     {
         list($lhs, $rhs) = explode('->', $string);
+        if (!is_callable($routine)) {
+            $routine = function () {};
+        }
 
         if ($lhs && $rhs) {
             if (preg_match("/[a-z_\s']/i", $lhs) && preg_match('/[a-z_\s\.]/i', $rhs)) {

@@ -63,20 +63,20 @@ class RulesCollection implements Iterator, CollectionInterface
      * You must provide a list of rules, the following formats are accepted:
      *
      * #### Rules as arrays
-     * 
+     *
      * ``php
      * [
-     *     ['S -> a A', function (&$info) { }],
-     *     ['A -> b B', function (&$info) { }],
-     *     ['B -> c'], // semantic routine is optional
+     *     'S -> a A' => function (&$info) { },
+     *     'A -> b B' => function (&$info) { },
+     *     'B -> c', // semantic routine is optional
      *     ....
      * ]
      * ```
      *
      * #### Rules as a single string
      *
-     * In this case no semantic rule is given for each rule
-     * 
+     * In this case no semantic routine is given for each rule
+     *
      * ```php
      * [
      *     'S -> a A',
@@ -101,7 +101,7 @@ class RulesCollection implements Iterator, CollectionInterface
      *
      * ```php
      * [
-     *     ['S -> a A', function($info) { }]
+     *     'S -> a A' => function($info) { },
      *     'A -> b B',
      *     new Rule('B -> c'),
      * ]
@@ -112,41 +112,49 @@ class RulesCollection implements Iterator, CollectionInterface
      */
     public function __construct(array $collection = [])
     {
-        if (!empty($collection)) {
-            foreach ($collection as $i => $rule) {
-                if (!is_object($rule)) {
-                    // rule given as an array
-                    if (is_array($rule)) {
-                        if (count($rule) === 2) {
-                            if (is_string($rule[0])) {
-                                $rule = new Rule($rule[0], $rule[1]);
-                            } else {
-                                $rule = new Rule($rule[1], $rule[0]);
-                            }
-                        } else {
-                            $rule = new Rule($rule[0]);
-                        }
-                    } elseif (is_string($rule)) {
-                        $rule = new Rule($rule);
-                    }
-                }
-
-                array_unshift($this->_variables, $rule->lhs());
-                if ($i == 0) {
-                    $this->_startVariable = $rule->lhs();
-                }
-                $this->_rules[] = $rule;
-            }
-            $this->_variables = array_unique($this->_variables);
-
-            foreach ($this->_rules as $rule) {
-                $rhs = $rule->rhs();
-                $rhs = explode(' ', $rhs);
-                $rhs = array_diff($rhs, $this->_variables);
-                $this->_terminals = array_merge($this->_terminals, $rhs);
-            }
-            $this->_terminals = array_unique($this->_terminals);
+        if (empty($collection)) {
+            return;
         }
+
+        $i = 0;
+        foreach ($collection as $index => $rule) {
+            if (!($rule instanceof Rule)) {
+                if (is_string($index) && is_callable($rule)) {
+                    // 'S -> a' => function()
+                    $left = $index;
+                    $right = $rule;
+                } elseif (is_integer($index) && is_string($rule)) {
+                    // 0 => 'S -> a'
+                    $left = $rule;
+                    $right = '';
+                }
+
+                if (isset($left) && isset($right)) {
+                    $rule = new Rule($left, $right);
+                    unset($left, $right);
+                }
+            }
+
+            if (!($rule instanceof Rule)) {
+                continue;
+            }
+
+            array_unshift($this->_variables, $rule->lhs());
+            if ($i == 0) {
+                $this->_startVariable = $rule->lhs();
+            }
+            $this->_rules[] = $rule;
+            $i++;
+        }
+
+        $this->_variables = array_unique($this->_variables);
+        foreach ($this->_rules as $rule) {
+            $rhs = $rule->rhs();
+            $rhs = explode(' ', $rhs);
+            $rhs = array_diff($rhs, $this->_variables);
+            $this->_terminals = array_merge($this->_terminals, $rhs);
+        }
+        $this->_terminals = array_unique($this->_terminals);
     }
 
     /**
@@ -196,7 +204,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Pops out the last element from the rules stack.
-     * 
+     *
      * @return \Phparser\Rule\Rule
      */
     public function pop()
@@ -216,7 +224,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Calculates this collection's core.
-     * 
+     *
      * @param bool $hash If true it'll returns a hash value representing its core,
      *  if false it'll returns an array of rules representing its core.
      * @return string|array
@@ -238,7 +246,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Merge two collection of rules.
-     * 
+     *
      * @param \Phparser\Rule\CollectionInterface $collection Collection to merge with
      * @return void
      */
@@ -271,7 +279,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Given an index gets the rule at that position within this collection.
-     * 
+     *
      * @param int $index Rule's index
      * @return \Phparser\Rule\Rule The rule
      */
@@ -323,7 +331,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
         $this->_canonicalCollection = $collection;
         return $collection;
-    }    
+    }
 
     /**
      * Calculates the "goto" set for a given $item and $symbol.
@@ -375,12 +383,11 @@ class RulesCollection implements Iterator, CollectionInterface
     {
         $regex = implode('|', $this->variables());
         $hasChanged = true;
+
         while ($hasChanged) {
             $hasChanged = false;
-
             foreach ($set as $rule) {
                 $result = preg_match('/\.\b(' . $regex . ')\b/', $rule->rhs(), $matches);
-
                 if ($result) {
                     $variable = str_replace('.', '', $matches[1]);
                     foreach ($this->_rules as $r) {
@@ -402,7 +409,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Returns the number of elements on this collection.
-     * 
+     *
      * @return int
      */
     public function count()
@@ -412,7 +419,7 @@ class RulesCollection implements Iterator, CollectionInterface
 
     /**
      * Checks whether a rule exists in this collection or not.
-     * 
+     *
      * @param \Phparser\Rulre\Rule $rule
      * @return bool
      */
@@ -423,13 +430,12 @@ class RulesCollection implements Iterator, CollectionInterface
                 return true;
             }
         }
-
         return false;
     }
 
     /**
      * Strings representation of this collection.
-     * 
+     *
      * @return string
      */
     public function __toString()
@@ -438,7 +444,6 @@ class RulesCollection implements Iterator, CollectionInterface
         foreach ($this->_rules as $rule) {
             $out[] = "{$rule}";
         }
-
         return '{' . implode('; ', $out) . '}';
     }
 
