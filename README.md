@@ -2,7 +2,7 @@
 
 A very simple LR(0) and LR(1) parser generator written in PHP.
 
-## Example:
+## Example
 
 Simple calculator with operator precedence:
 
